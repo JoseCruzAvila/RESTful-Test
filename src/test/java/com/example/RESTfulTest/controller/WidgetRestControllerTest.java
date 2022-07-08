@@ -79,6 +79,24 @@ class WidgetRestControllerTest {
     }
 
     @Test
+    @DisplayName("GET /rest/widget/1")
+    void testGetWidgetById() throws Exception {
+        Widget widgetToReturn = new Widget(1L, "New Widget", "This is my widget", 1);
+        // Setup our mocked service
+        doReturn(Optional.of(widgetToReturn)).when(service).findById(1L);
+
+        // Execute the GET request
+        mockMvc.perform(get("/rest/widget/{id}", 1L))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(header().string(HttpHeaders.LOCATION, "/rest/widget/1"))
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.name", is("New Widget")))
+                .andExpect(jsonPath("$.description", is("This is my widget")))
+                .andExpect(jsonPath("$.version", is(1)));
+    }
+
+    @Test
     @DisplayName("POST /rest/widget")
     void testCreateWidget() throws Exception {
         // Setup our mocked service
@@ -106,6 +124,41 @@ class WidgetRestControllerTest {
                 .andExpect(jsonPath("$.version", is(1)));
     }
 
+    @Test
+    @DisplayName("PUT /rest/widget/1")
+    void testUpdateWidget() throws Exception {
+        Widget currentWidget = new Widget(1L, "New Widget", "This is my widget", 1);
+        Widget widgetToPut = new Widget(1L, "Updated Widget", "This is the updated widget", 1);
+        Widget widgetToReturn = new Widget(1L, "Updated Widget", "This is the updated widget", 2);
+        doReturn(Optional.of(currentWidget)).when(service).findById(1L);
+        doReturn(widgetToReturn).when(service).save(any());
+
+        mockMvc.perform(put("/rest/widget/{id}", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(widgetToPut))
+                .header(HttpHeaders.IF_MATCH, 1))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(header().string(HttpHeaders.LOCATION, "/rest/widget/1"))
+                .andExpect(header().string(HttpHeaders.ETAG, "\"2\""))
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.name", is("Updated Widget")))
+                .andExpect(jsonPath("$.description", is("This is the updated widget")))
+                .andExpect(jsonPath("$.version", is(2)));
+    }
+
+    @Test
+    @DisplayName("PUT /rest/widget/1 - Not Found")
+    void testUpdateWidgetNotFound() throws Exception {
+        Widget widgetToPut = new Widget(1L, "Updated Widget", "This is the updated widget", 1);
+        doReturn(Optional.empty()).when(service).findById(1L);
+
+        mockMvc.perform(put("/rest/widget/{id}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJsonString(widgetToPut))
+                        .header(HttpHeaders.IF_MATCH, 1))
+                .andExpect(status().isNotFound());
+    }
 
     static String asJsonString(final Object obj) {
         try {

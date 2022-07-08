@@ -10,4 +10,6 @@ public interface WidgetService {
     List<Widget> findAll();
     Widget save(Widget widget);
     void deleteById(Long id);
+
+
 }
